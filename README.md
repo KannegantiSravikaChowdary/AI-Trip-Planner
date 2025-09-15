@@ -27,11 +27,17 @@
    git clone <repo-url>
    cd TripMate
 2. **Install dependencies:**
+   ```
    npm install
-3. **Configure Firebase & Google OAuth credentials in a .env file:**
+   ```
+4. **Configure Firebase & Google OAuth credentials in a .env file:**
+   ```
    VITE_GOOGLE_AUTH_CLIENT_ID=your-client-id
+   
    VITE_GEMINI_API_AI_KEY=your-api-key
+   
    VITE_GOOGLE_PLACES_API_KEY=your-api
-4. **Start the app:**
+   ```
+6. **Start the app:**
     npm run dev
    ```
