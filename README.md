@@ -19,6 +19,10 @@
 - **Database**: Firebase (for user storage & trips)
 - **API Calls**: Axios
 
+## 📸 Screenshots
+   (Screenshots/result1.png)
+   (screenshots/result2.png)
+
 ## 🚀 How to Run Locally
 
 1. **Clone the repo:**
