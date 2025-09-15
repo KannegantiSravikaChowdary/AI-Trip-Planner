@@ -19,7 +19,6 @@
 - **Database**: Firebase (for user storage & trips)
 - **API Calls**: Axios
 
-
 ## 🚀 How to Run Locally
 
 1. **Clone the repo:**
@@ -39,5 +38,6 @@
    VITE_GOOGLE_PLACES_API_KEY=your-api
    ```
 6. **Start the app:**
+   
     npm run dev
    ```
