@@ -21,8 +21,8 @@
 
 ## 📸 Screenshots
 
-![Result 1](screenshots/result1.png)
-![Result 2](screenshots/result2.png)
+![Result 1](Screenshots/result1.png)
+![Result 2](Screenshots/result2.png)
 
 ## 🚀 How to Run Locally
 
@@ -43,6 +43,6 @@
    VITE_GOOGLE_PLACES_API_KEY=your-api
    ```
 6. **Start the app:**
-   
+   ```
     npm run dev
    ```
