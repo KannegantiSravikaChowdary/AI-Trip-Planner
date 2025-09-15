@@ -20,8 +20,9 @@
 - **API Calls**: Axios
 
 ## 📸 Screenshots
-   (Screenshots/result1.png)
-   (screenshots/result2.png)
+
+![Result 1](screenshots/result1.png)
+![Result 2](screenshots/result2.png)
 
 ## 🚀 How to Run Locally
 
