@@ -31,7 +31,7 @@ function Header() {
   const GetUserProfile = (tokenInfo) => {
     axios
       .get(
-        `https://www.googleapis.com/oauth2/v1/userinfo?access_token=${tokenInfo?.access_token}`,
+        `https://www.googleapis.com/oauth2/v1/userinfo?acces_token=${tokenInfo?.access_token}`,
         {
           headers: {
             Authorization: `Bearer ${tokenInfo?.access_token}`,
@@ -113,6 +113,9 @@ function Header() {
                 alt="TripMate Logo"
                 className="w-[50px] h-[50px]"
               />
+              <h1 className="text-2xl font-extrabold mt-2 bg-gradient-to-r from-cyan-500 to-blue-600 bg-clip-text text-transparent">
+                  TripMate
+                </h1>
               <h2 className="font-bold text-lg mt-6">Sign In with Google</h2>
               <p>Sign In to the App with Google authentication securely</p>
               <Button
