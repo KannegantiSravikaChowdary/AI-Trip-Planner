@@ -15,23 +15,20 @@ import {
 import { FcGoogle } from "react-icons/fc";
 import { useGoogleLogin } from "@react-oauth/google";
 import axios from "axios";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/service/firebaseConfig";
 import { AiOutlineLoading3Quarters } from "react-icons/ai";
 import { useNavigate } from "react-router-dom";
 
 function CreateTrip() {
-  const [place, setPlace] = useState();
-  const [formData, setFromData] = useState([]);
+  const [place, setPlace] = useState(null);
+  const [formData, setFormData] = useState({});
   const [openDialog, setOpenDialog] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleInputChange = (name, value) => {
-    setFromData({
-      ...formData,
-      [name]: value,
-    });
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   useEffect(() => {
@@ -39,8 +36,8 @@ function CreateTrip() {
   }, [formData]);
 
   const login = useGoogleLogin({
-    onSuccess: (codeResp) => GetUserProfile(codeResp),
-    onError: (error) => console.log(error),
+    onSuccess: codeResp => GetUserProfile(codeResp),
+    onError: error => console.log(error),
   });
 
   const OnGenerateTrip = async () => {
@@ -49,61 +46,75 @@ function CreateTrip() {
       setOpenDialog(true);
       return;
     }
+
     if (
-      formData?.totalDays > 5 ||
       !formData?.location ||
+      !formData?.totalDays ||
       !formData?.budget ||
-      !formData?.traveler
+      !formData?.traveler ||
+      formData.totalDays > 5
     ) {
-      toast("Please fill all details!");
+      toast("Please fill all details correctly! Max 5 days allowed.");
       return;
     }
+
     toast("Form generated.");
     setLoading(true);
 
-    const FINAL_PROMPT = AI_PROMPT
-      .replace("{location}", formData?.location)
-      .replace("{totalDays}", formData?.totalDays)
-      .replace("{traveler}", formData?.traveler)
-      .replace("{budget}", formData?.budget);
+    try {
+      const FINAL_PROMPT = AI_PROMPT
+        .replace("{location}", formData?.location)
+        .replace("{totalDays}", formData?.totalDays)
+        .replace("{traveler}", formData?.traveler)
+        .replace("{budget}", formData?.budget);
 
-    const result = await chatSession.sendMessage(FINAL_PROMPT);
-    setLoading(false);
-    SaveAiTrip(result?.response?.text());
+      const result = await chatSession.sendMessage(FINAL_PROMPT);
+      await SaveAiTrip(result?.response?.text());
+    } catch (err) {
+      console.error(err);
+      toast("Failed to generate trip. Try again!");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const SaveAiTrip = async (TripData) => {
-    setLoading(true);
+  const SaveAiTrip = async TripData => {
     const user = JSON.parse(localStorage.getItem("user"));
     const docId = Date.now().toString();
-    await setDoc(doc(db, "AiTrips", docId), {
-      userSelection: formData,
-      tripData: JSON.parse(TripData),
-      userEmail: user?.email,
-      id: docId,
-    });
-    setLoading(false);
-    navigate("/view-trip/" + docId);
+    try {
+      setLoading(true);
+      await setDoc(doc(db, "AiTrips", docId), {
+        userSelection: formData,
+        tripData: JSON.parse(TripData),
+        userEmail: user?.email,
+        id: docId,
+        createdAt: serverTimestamp(),
+      });
+      navigate("/view-trip/" + docId);
+    } catch (err) {
+      console.error(err);
+      toast("Failed to save trip. Please try again!");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const GetUserProfile = (tokenInfo) => {
+  const GetUserProfile = tokenInfo => {
     axios
       .get("https://www.googleapis.com/oauth2/v1/userinfo?alt=json", {
-        headers: {
-          Authorization: `Bearer ${tokenInfo?.access_token}`,
-        },
+        headers: { Authorization: `Bearer ${tokenInfo?.access_token}` },
       })
-      .then((resp) => {
+      .then(resp => {
         const userData = {
           email: resp.data.email,
-          name: resp.data.name,
-          picture: resp.data.picture,
+          name: resp.data.name || resp.data.email.split("@")[0],
+          picture: resp.data.picture || null,
         };
         localStorage.setItem("user", JSON.stringify(userData));
         setOpenDialog(false);
         OnGenerateTrip();
       })
-      .catch((error) => {
+      .catch(error => {
         console.error("Failed to fetch user profile:", error);
         toast("Google authentication failed. Please try again!");
       });
@@ -121,7 +132,7 @@ function CreateTrip() {
         </p>
       </div>
 
-      <div className="mt-20 flex flex-col gap-10 ">
+      <div className="mt-20 flex flex-col gap-10">
         {/* Destination */}
         <div className="mb-5">
           <label className="text-xl mb-3 font-medium">
@@ -131,7 +142,7 @@ function CreateTrip() {
             apiKey={import.meta.env.VITE_GOOGLE_PLACES_API_KEY}
             selectProps={{
               place,
-              onChange: (v) => {
+              onChange: v => {
                 setPlace(v);
                 handleInputChange("location", v.label);
               },
@@ -145,10 +156,11 @@ function CreateTrip() {
             How many days are you planning your trip?
           </label>
           <Input
-            placeholder={"ex.3"}
+            placeholder="ex.3"
             type="number"
             min="1"
-            onChange={(v) => handleInputChange("totalDays", v.target.value)}
+            max="5"
+            onChange={v => handleInputChange("totalDays", v.target.value)}
           />
         </div>
 
@@ -162,8 +174,7 @@ function CreateTrip() {
                 key={index}
                 onClick={() => handleInputChange("budget", item.title)}
                 className={`cursor-pointer p-4 border rounded-lg hover:shadow-lg ${
-                  formData?.budget == item.title &&
-                  "shadow-lg border-cyan-500"
+                  formData?.budget === item.title ? "shadow-lg border-cyan-500" : ""
                 }`}
               >
                 <h2 className="text-3xl">{item.icon}</h2>
@@ -182,8 +193,7 @@ function CreateTrip() {
                 key={index}
                 onClick={() => handleInputChange("traveler", item.people)}
                 className={`cursor-pointer p-4 border rounded-lg hover:shadow-lg ${
-                  formData?.traveler == item.people &&
-                  "shadow-lg border-cyan-500"
+                  formData?.traveler === item.people ? "shadow-lg border-cyan-500" : ""
                 }`}
               >
                 <h2 className="text-3xl">{item.icon}</h2>
@@ -196,7 +206,7 @@ function CreateTrip() {
       </div>
 
       {/* Generate Button */}
-      <div className="my-10 flex justify-end ">
+      <div className="my-10 flex justify-end">
         <Button onClick={OnGenerateTrip} disabled={loading}>
           {loading ? (
             <AiOutlineLoading3Quarters className="h-7 w-7 animate-spin" />
@@ -207,31 +217,25 @@ function CreateTrip() {
       </div>
 
       {/* Sign In Dialog */}
-      <Dialog open={openDialog}>
+      <Dialog open={openDialog} onOpenChange={setOpenDialog}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="sr-only">Sign In</DialogTitle>
             <DialogDescription className="text-center">
               <div className="flex flex-col items-center">
-                <img
-                  src="/logo.png"
-                  alt="TripMate Logo"
-                  className="h-16 w-16"
-                />
+                <img src="/logo.png" alt="TripMate Logo" className="h-16 w-16" />
                 <h1 className="text-2xl font-extrabold mt-2 bg-gradient-to-r from-cyan-500 to-blue-600 bg-clip-text text-transparent">
                   TripMate
                 </h1>
               </div>
-              <h2 className="font-bold text-lg mt-6">Sign In with Google</h2>
-              <p className="text-sm text-gray-600">
+              <h2 className="font-bold text-lg mt-6">
                 Sign in to TripMate with Google authentication securely
-              </p>
+              </h2>
               <Button
                 onClick={login}
-                className="w-full mt-5 flex gap-4 items-center"
+                className="w-full mt-5 flex gap-4 items-center bg-blue-500 hover:bg-blue-600 text-white"
               >
-                <FcGoogle className="h-7 w-7" />
-                Sign In With Google
+                <FcGoogle className="h-7 w-7" /> Sign In With Google
               </Button>
             </DialogDescription>
           </DialogHeader>
